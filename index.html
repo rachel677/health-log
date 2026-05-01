@@ -179,25 +179,26 @@
 
 <div class="section">
 <h4>- ねむりの記録 -</h4>
-<div id="sleep">
-  <button onclick="select(this,'sleep','少ない')">🥺少ない（≤5h）</button>
-  <button onclick="select(this,'sleep','普通')">🍃普通(5–7h)</button>
-  <button onclick="select(this,'sleep','良い')">🧚‍♀️良い(≥7h)</button>
-</div>
+<input id="sleepHours" placeholder="" oninput="analyzeSleep()"> H
+<p id="sleepResult" style="font-size:13px; margin-top:6px;"></p>
 
-<input id="sleepHours" placeholder="7.5"> H
+
+
+
+
+<div class="section">
+  <h4>- リズム管理 -</h4>
+  <div id="cycle">
+    <button onclick="select(this,'cycle','未開始')">まもなく🙂‍↔️</button>
+  </div>
+  
+  <input type="date" id="cycleDate">
 
 <div class="section">
 <h4>- 今日のココロは？ -</h4>
 <textarea id="note" placeholder="今日はどんな気持ちでしたか？"></textarea>
 
-<div class="section">
-<h4>- リズム管理 -</h4>
-<div id="cycle">
-  <button onclick="select(this,'cycle','未開始')">まもなく🙂‍↔️</button>
-</div>
 
-<input type="date" id="cycleDate">
 
 <br><br>
 <button onclick="back()">戻る</button>
@@ -314,6 +315,7 @@ document.querySelectorAll(".selected").forEach(b=>{
 });
 
 document.getElementById("sleepHours").value = "";
+analyzeSleep();
 document.getElementById("cycleDate").value = "";
 document.getElementById("note").value = "";
 
@@ -437,6 +439,31 @@ let name = localStorage.getItem("name");
 document.getElementById("greeting").innerText = name + "さん、こんにちは";
 
 generateCalendar();
+}
+
+function analyzeSleep(){
+
+let h = parseFloat(document.getElementById("sleepHours").value);
+let result = document.getElementById("sleepResult");
+
+if(!h){
+  result.innerText = "";
+  selected.sleep = "";
+  return;
+}
+
+if(h < 5.5){
+  selected.sleep = "少ない";
+  result.innerText = "🥺 今夜（こんや）は、自分（じぶん）にやさしく。早（はや）めに休（やす）もうね";
+}
+else if(h <= 7){
+  selected.sleep = "普通";
+  result.innerText = "🍃 いいリズム ♪ 今日（きょう）も素敵な（すてきな）一日（いちにち）を";
+}
+else{
+  selected.sleep = "多い";
+  result.innerText = "🧚‍♀️ たっぷり快眠（かいみん）！今日（きょう）は無敵（むてき）の一日（いちにち）になりそう";
+}
 }
 
 </script>
