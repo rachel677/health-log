@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>やさしい健康ログ</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #fff0f5;
+  text-align: center;
+  padding: 16px;
+  color: #4b2e2e;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 420px;
+  margin: 20px auto;
+}
+
+button {
+  margin: 5px;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: #f7dede;
+  cursor: pointer;
+}
+
+.selected {
+  background: #f2bcbc;
+  border: 2px solid #c08a8a;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7,1fr);
+  gap: 5px;
+}
+
+.day {
+  padding: 8px;
+  border-radius: 6px;
+  background: #ffe4e1;
+  cursor: pointer;
+}
+
+.checked { background: #f2bcbc; }
+.today { border: 2px solid #c08a8a; }
+
+.hidden { display:none; }
+
+#sleep { display:flex; }
+#sleep button { flex:1; font-size:12px; }
+
+textarea {
+  width: 85%;
+  height: 150px;
+  border-radius: 6px;
+  padding: 6px;
+}
+
+.section {
+  margin-bottom: 13px;
+  background: #fff7f9;
+}
+
+button {
+  margin: 8px;
+}
+
+/* ⭐ 标题更大 + 和内容贴近 */
+.section h4 {
+  margin: 1 0 6px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+/* ⭐ 内容本身不额外撑开 */
+.section div {
+  margin: 0;
+}
+
+/*calender/
+h3 {
+  margin-bottom: 12px;
+  font-size: 18px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="welcomePage" class="card">
+  <h3>お名前を教えてください</h3>
+  <input id="nameInput">
+  <br><br>
+  <button onclick="startApp()">はじめる</button>
+</div>
+
+<div id="mainPage" class="card hidden">
+  <h3 id="greeting"></h3>
+  <div class="calendar" id="calendar"></div>
+</div>
+
+<div id="detailPage" class="card hidden">
+
+<div class="section">
+<h3>カレンダー</h3>
+<input type="date" id="datePicker">
+
+<div class="section">
+<h4>- ココロの状態 -</h4>
+<div id="mood">
+  <button onclick="select(this,'mood',2)">😃ハッピー</button>
+  <button onclick="select(this,'mood',1)">🫤まあまあ</button>
+  <button onclick="select(this,'mood',0)">☹️モヤモヤ</button>
+</div>
+
+<div class="section">
+<h4>- コンディション -</h4>
+<div id="body">
+  <button onclick="select(this,'body','元気')">ピカピカ✨</button>
+  <button onclick="select(this,'body','普通')">おだやか🍵 </button>
+  <button onclick="select(this,'body','疲れ')">お疲れ🫠</button>
+</div>
+
+<div class="section">
+<h4>- ねむりの記録 -</h4>
+<div id="sleep">
+  <button onclick="select(this,'sleep','少ない')">🥺少ない（≤5h）</button>
+  <button onclick="select(this,'sleep','普通')">🍃普通(5–7h)</button>
+  <button onclick="select(this,'sleep','良い')">🧚‍♀️良い(≥7h)</button>
+</div>
+
+<input id="sleepHours" placeholder="7.5"> H
+
+<div class="section">
+<h4>- 今日のココロは？ -</h4>
+<textarea id="note" placeholder="今日はどんな気持ちでしたか？"></textarea>
+
+<div class="section">
+<h4>- リズム管理 -</h4>
+<div id="cycle">
+  <button onclick="select(this,'cycle','未開始')">まもなく🙂‍↔️</button>
+</div>
+
+<input type="date" id="cycleDate">
+
+<br><br>
+<button onclick="back()">戻る</button>
+<button onclick="deleteLog()" style="background:#ffe4e1;">この日の記録を削除</button>
+<button onclick="saveLog()">保存</button>
+
+</div>
+
+<script>
+
+let selected = {mood:null, body:"", sleep:"", cycle:""};
+let currentDate = "";
+
+/* ⭐ 核心：可取消选择 + 经期互斥 */
+function select(btn, group, value){
+
+  // ✔ 再次点击取消
+  if(btn.classList.contains("selected")){
+    btn.classList.remove("selected");
+    selected[group] = group==="mood" ? null : "";
+    return;
+  }
+
+  // ✔ 单选逻辑
+  let buttons = btn.parentNode.getElementsByTagName("button");
+  for(let b of buttons){ b.classList.remove("selected"); }
+
+  btn.classList.add("selected");
+  selected[group] = value;
+
+  // ⭐ 经期互斥逻辑
+  if(group === "cycle"){
+    document.getElementById("cycleDate").value = "";
+  }
+}
+
+/* ⭐ 日期选了 → 自动取消“未开始” */
+document.getElementById("cycleDate").addEventListener("change", function(){
+  if(this.value){
+    selected.cycle = "";
+
+    let btns = document.getElementById("cycle").getElementsByTagName("button");
+    for(let b of btns) b.classList.remove("selected");
+  }
+});
+
+function startApp(){
+
+let name = document.getElementById("nameInput").value;
+if(!name) return;
+
+localStorage.setItem("name", name);
+
+// ⭐ 欢迎致辞页面（打字感可以后面再做）
+document.getElementById("welcomePage").innerHTML = `
+  <h3>${name}さん、ようこそ</h3>
+  <p style="font-size:14px; line-height:1.6;">
+あなたの毎日を、もっとやさしく。<br>
+がんばりすぎなくて大丈夫。<br>
+少しずつ、自分を好きになれるように。<br>
+ずっと、そばで見守っています。🌿<br><br>
+  </p>
+  <br>
+  <button onclick="enterMain()">はじめる</button>
+`;
+}
+
+/* 日历 */
+function generateCalendar(){
+
+  let cal = document.getElementById("calendar");
+  cal.innerHTML = "";
+
+  let today = new Date();
+  let year = today.getFullYear();
+  let month = today.getMonth();
+
+  let days = new Date(year, month+1, 0).getDate();
+  let logs = JSON.parse(localStorage.getItem("logs")) || [];
+
+  for(let i=1;i<=days;i++){
+
+    let d = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+
+    let div = document.createElement("div");
+    div.className = "day";
+    div.innerText = i;
+
+    if(logs.find(l=>l.date===d)){
+      div.classList.add("checked");
+      div.innerText = i + "✓";
+    }
+
+    div.onclick = ()=>openDetail(d);
+    cal.appendChild(div);
+  }
+}
+
+/* 进入详情 */
+function openDetail(date){
+
+currentDate = date;
+
+document.getElementById("mainPage").classList.add("hidden");
+document.getElementById("detailPage").classList.remove("hidden");
+
+document.getElementById("datePicker").value = date;
+
+// ⭐ 1. 每次打开都先彻底清空 UI
+selected = {mood:null, body:"", sleep:"", cycle:""};
+
+document.querySelectorAll(".selected").forEach(b=>{
+  b.classList.remove("selected");
+});
+
+document.getElementById("sleepHours").value = "";
+document.getElementById("cycleDate").value = "";
+document.getElementById("note").value = "";
+
+// ⭐ 2. 再尝试加载当天已有数据
+let logs = JSON.parse(localStorage.getItem("logs")) || [];
+let data = logs.find(l => l.date === date);
+
+if(data){
+
+  selected.mood = data.mood;
+  selected.body = data.body;
+  selected.sleep = data.sleep;
+  selected.cycle = data.cycle;
+
+  // 恢复按钮选中状态
+  let allBtns = document.querySelectorAll("#detailPage button");
+
+  allBtns.forEach(b=>{
+    if(
+      b.onclick &&
+      b.innerText.includes(data.sleep) ||
+      b.innerText.includes(data.cycle) ||
+      b.innerText.includes(data.body)
+    ){
+      b.classList.add("selected");
+    }
+  });
+
+  document.getElementById("sleepHours").value = data.sleepHours || "";
+  document.getElementById("cycleDate").value = data.cycleDate || "";
+  document.getElementById("note").value = data.note || "";
+}
+}
+
+/* 保存 */
+function saveLog(){
+
+  let date = document.getElementById("datePicker").value;
+  if(!date){ alert("日付を選択してください"); return; }
+
+  if(selected.mood===null){ alert("気分を選択してください"); return; }
+
+  let logs = JSON.parse(localStorage.getItem("logs")) || [];
+  logs = logs.filter(l=>l.date!==date);
+
+
+// ⭐ 删除当天旧数据（核心修复）
+logs = logs.filter(l => l.date !== date);
+
+// ⭐ 再写入新数据
+logs.push({
+  date: date,
+  mood: selected.mood,
+  body: selected.body,
+  sleep: selected.sleep,
+  sleepHours: parseFloat(document.getElementById("sleepHours").value) || 0,
+  cycle: selected.cycle,
+  cycleDate: document.getElementById("cycleDate").value,
+  note: document.getElementById("note").value || ""
+});
+
+localStorage.setItem("logs", JSON.stringify(logs));
+
+showMain();
+}
+
+
+function showMain(){
+  document.getElementById("detailPage").classList.add("hidden");
+  document.getElementById("mainPage").classList.remove("hidden");
+  generateCalendar();
+}
+
+function back(){ showMain(); }
+
+function deleteLog(){
+
+  let date = document.getElementById("datePicker").value;
+
+  if(!date) return;
+
+  let confirmDelete = confirm("この日の記録を削除しますか？");
+
+  if(!confirmDelete) return;
+
+  let logs = JSON.parse(localStorage.getItem("logs")) || [];
+
+  // ⭐ 删除这一天
+  logs = logs.filter(l => l.date !== date);
+
+  localStorage.setItem("logs", JSON.stringify(logs));
+
+  // ⭐ 返回主页面刷新
+  showMain();
+}
+
+function deleteLog(){
+
+let date = document.getElementById("datePicker").value;
+
+if(!date) return;
+
+let confirmDelete = confirm("この日の記録を削除しますか？");
+
+if(!confirmDelete) return;
+
+let logs = JSON.parse(localStorage.getItem("logs")) || [];
+
+// ⭐ 删除这一天
+logs = logs.filter(l => l.date !== date);
+
+localStorage.setItem("logs", JSON.stringify(logs));
+
+// ⭐ 返回主页面刷新
+showMain();
+}
+
+window.onload = function(){
+
+let name = localStorage.getItem("name");
+
+if(name){
+  // 已有用户 → 直接进入主页面
+  document.getElementById("welcomePage").classList.add("hidden");
+  document.getElementById("mainPage").classList.remove("hidden");
+
+  document.getElementById("greeting").innerText = name + "さん、こんにちは";
+  generateCalendar();
+
+}else{
+  // 新用户 → 显示欢迎页
+  document.getElementById("welcomePage").classList.remove("hidden");
+}
+}
+
+</script>
+
+</body>
+</html>
